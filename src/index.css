@@ -979,6 +979,99 @@ svg.i {
   gap: 10px;
 }
 
+.pwa-banner {
+  position: fixed;
+  z-index: 1200;
+  top: calc(12px + env(safe-area-inset-top, 0px));
+  left: 50%;
+  width: min(620px, calc(100% - 24px));
+  min-height: 76px;
+  padding: 12px 48px 12px 14px;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border: 1px solid #ffffff20;
+  border-radius: 18px;
+  background: #171917;
+  color: #fff;
+  box-shadow: 0 12px 36px #0005;
+}
+
+.pwa-banner-icon {
+  width: 48px;
+  height: 48px;
+  flex: none;
+  border-radius: 13px;
+}
+
+.pwa-banner-copy {
+  min-width: 0;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.pwa-banner-copy strong {
+  font-size: 15px;
+}
+
+.pwa-banner-copy span,
+.pwa-banner-hint {
+  color: #c5cbc6;
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.pwa-banner-install {
+  flex: none;
+  padding: 9px 13px;
+  border-radius: 11px;
+  background: var(--au);
+  color: #211900;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.pwa-banner-close {
+  position: absolute;
+  top: 6px;
+  right: 7px;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  color: #d5d9d6;
+  font-size: 23px;
+  line-height: 1;
+}
+
+.pwa-banner-close:hover {
+  background: #ffffff1a;
+}
+
+.pwa-banner-hint {
+  position: absolute;
+  left: 74px;
+  bottom: 5px;
+  font-size: 9px;
+}
+
+.pwa-banner-help {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  right: 0;
+  padding: 12px 14px;
+  border: 1px solid #ffffff20;
+  border-radius: 13px;
+  background: #171917;
+  color: #fff;
+  font-size: 13px;
+  line-height: 1.45;
+  box-shadow: 0 8px 24px #0004;
+}
+
 .connection-status.offline {
   background: var(--tcl);
 }
@@ -995,6 +1088,27 @@ svg.i {
   padding: 24px;
   color: var(--m);
   text-align: center;
+}
+
+@media (max-width: 420px) {
+  .pwa-banner {
+    gap: 9px;
+    padding-left: 10px;
+  }
+  .pwa-banner-icon {
+    width: 42px;
+    height: 42px;
+  }
+  .pwa-banner-copy span {
+    font-size: 10px;
+  }
+  .pwa-banner-install {
+    padding: 8px 10px;
+    font-size: 12px;
+  }
+  .pwa-banner-hint {
+    left: 61px;
+  }
 }
 
 .modal-overlay {
@@ -1097,6 +1211,19 @@ svg.i {
     font-weight: 600;
     color: var(--t);
     font-size: 14px;
+  }
+  .side .nb {
+    margin-left: auto;
+    min-width: 20px;
+    height: 20px;
+    padding: 0 5px;
+    border-radius: 10px;
+    display: grid;
+    place-items: center;
+    background: var(--tc);
+    color: #fff;
+    font-size: 11px;
+    font-weight: 800;
   }
   .side .side-logout {
     display: flex;

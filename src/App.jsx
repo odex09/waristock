@@ -2,6 +2,7 @@ import { lazy, Suspense, useEffect } from 'react'
 import { AppProvider, useApp } from './context/AppContext'
 import BottomNav from './components/BottomNav'
 import SideNav from './components/SideNav'
+import PwaInstallBanner from './components/PwaInstallBanner'
 
 const Login = lazy(() => import('./pages/Login'))
 const Home = lazy(() => import('./pages/Home'))
@@ -69,6 +70,7 @@ function AppContent() {
 
   return (
     <>
+      <PwaInstallBanner />
       {(!isOnline || pendingSyncCount > 0) && (
         <div
           className={`connection-status${isOnline ? '' : ' offline'}`}

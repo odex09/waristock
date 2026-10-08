@@ -451,7 +451,7 @@ export function AppProvider({ children }) {
       row[9] === productId ? [...row.slice(0, 3), nextStock, ...row.slice(4)] : row
     ))
     setMovements((current) => [[
-      0,
+      type === 'entry' ? 1 : 0,
       productIndex,
       quantity,
       movementTime,

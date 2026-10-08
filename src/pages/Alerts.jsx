@@ -42,7 +42,17 @@ export default function Alerts() {
                 className={`card al ${s === 2 ? 'r' : ''}`}
               >
                 <div className="pr">
-                  <div className="th">{p[1]}</div>
+                  <div className="th">
+                    {p[1]?.startsWith('/') || p[1]?.startsWith('http') ? (
+                      <img
+                        src={p[1]}
+                        alt=""
+                        style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 'inherit' }}
+                      />
+                    ) : (
+                      p[1]
+                    )}
+                  </div>
                   <div>
                     <b style={{ fontSize: '16px' }}>
                       {p[0]}

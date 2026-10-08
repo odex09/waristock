@@ -15,7 +15,8 @@ const ITEMS = [
 ]
 
 export default function SideNav() {
-  const { route } = useApp()
+  const { route, products } = useApp()
+  const alerts = products.filter((product) => product[3] === 0 || product[3] <= product[4]).length
 
   return (
     <aside className="side" aria-label="Navigation">
@@ -41,6 +42,11 @@ export default function SideNav() {
           >
             <Icon name={icon} />
             {label}
+            {name === 'alerts' && alerts > 0 && (
+              <span className="nb" aria-label={`${alerts} produits à réapprovisionner`}>
+                {alerts}
+              </span>
+            )}
           </a>
         )
       })}
