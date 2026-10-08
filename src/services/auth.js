@@ -8,7 +8,7 @@ export async function getSession() {
 }
 
 export async function signInWithPhone(countryCode, phone, password) {
-  const email = `${countryCode}${phone}@waristock.local`
+  const email = `${countryCode.replace(/^\+/, '')}${phone}@waristock.com`
   const { data, error } = await supabase.auth.signInWithPassword({
     email,
     password,
@@ -17,7 +17,7 @@ export async function signInWithPhone(countryCode, phone, password) {
 }
 
 export async function signUpWithPhone(countryCode, phone, password, shopData) {
-  const email = `${countryCode}${phone}@waristock.local`
+  const email = `${countryCode.replace(/^\+/, '')}${phone}@waristock.com`
   const { data: existing } = await supabase
     .from('profiles')
     .select('id')
