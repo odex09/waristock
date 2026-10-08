@@ -1,21 +1,22 @@
-import { useEffect } from 'react'
+import { lazy, Suspense, useEffect } from 'react'
 import { AppProvider, useApp } from './context/AppContext'
-import Login from './pages/Login'
-import Home from './pages/Home'
-import Products from './pages/Products'
-import ProductDetail from './pages/ProductDetail'
-import Move from './pages/Move'
-import AddProduct from './pages/AddProduct'
-import Alerts from './pages/Alerts'
-import Suppliers from './pages/Suppliers'
-import Inventory from './pages/Inventory'
-import Reports from './pages/Reports'
-import Settings from './pages/Settings'
-import More from './pages/More'
-import Clients from './pages/Clients'
-import Register from './pages/Register'
 import BottomNav from './components/BottomNav'
 import SideNav from './components/SideNav'
+
+const Login = lazy(() => import('./pages/Login'))
+const Home = lazy(() => import('./pages/Home'))
+const Products = lazy(() => import('./pages/Products'))
+const ProductDetail = lazy(() => import('./pages/ProductDetail'))
+const Move = lazy(() => import('./pages/Move'))
+const AddProduct = lazy(() => import('./pages/AddProduct'))
+const Alerts = lazy(() => import('./pages/Alerts'))
+const Suppliers = lazy(() => import('./pages/Suppliers'))
+const Inventory = lazy(() => import('./pages/Inventory'))
+const Reports = lazy(() => import('./pages/Reports'))
+const Settings = lazy(() => import('./pages/Settings'))
+const More = lazy(() => import('./pages/More'))
+const Clients = lazy(() => import('./pages/Clients'))
+const Register = lazy(() => import('./pages/Register'))
 
 const PAGES = {
   login: Login,
@@ -47,7 +48,14 @@ const _NAV_MAP = {
 }
 
 function AppContent() {
-  const { route, syncRoute } = useApp()
+  const {
+    route,
+    syncRoute,
+    toast,
+    isOnline,
+    pendingSyncCount,
+    syncPendingWrites,
+  } = useApp()
 
   useEffect(() => {
     const onHash = () => syncRoute()
@@ -61,6 +69,22 @@ function AppContent() {
 
   return (
     <>
+      {(!isOnline || pendingSyncCount > 0) && (
+        <div
+          className={`connection-status${isOnline ? '' : ' offline'}`}
+          role="status"
+          aria-live="polite"
+        >
+          {!isOnline
+            ? `Mode hors ligne${pendingSyncCount ? ` · ${pendingSyncCount} mouvement(s) en attente` : ''}`
+            : `${pendingSyncCount} mouvement(s) en attente de synchronisation`}
+          {isOnline && pendingSyncCount > 0 && (
+            <button className="sync-action" onClick={syncPendingWrites}>
+              Synchroniser
+            </button>
+          )}
+        </div>
+      )}
       {!isAuthPage && <SideNav />}
       <main
         id="app"
@@ -69,9 +93,16 @@ function AppContent() {
           paddingLeft: isAuthPage ? 0 : undefined,
         }}
       >
-        <Page />
+        <Suspense fallback={<div className="page-loading" role="status">Chargement…</div>}>
+          <Page />
+        </Suspense>
       </main>
       {!isAuthPage && <BottomNav />}
+      {toast && (
+        <div className="toast" role="status" aria-live="polite">
+          {toast}
+        </div>
+      )}
     </>
   )
 }

@@ -1,5 +1,6 @@
 import { useApp } from '../context/AppContext'
 import { Icon } from '../components/Icons'
+import LogoutButton from '../components/LogoutButton'
 
 const ITEMS = [
   ['suppliers', 'users', 'Fournisseurs'],
@@ -10,7 +11,15 @@ const ITEMS = [
 ]
 
 export default function More() {
-  const { navigate } = useApp()
+  const { navigate, auth } = useApp()
+  const profile = auth.profile
+  const ownerName = profile?.owner_name?.trim() || 'Gérant'
+  const shopName = profile?.shop_name?.trim() || 'Ma boutique'
+  const initials = ownerName
+    .split(/\s+/)
+    .map((name) => name.charAt(0))
+    .join('')
+    .slice(0, 2)
 
   return (
     <section className="scr n">
@@ -33,14 +42,14 @@ export default function More() {
             fontSize: '20px',
           }}
         >
-          AM
+          {initials}
         </div>
         <div>
           <b style={{ fontSize: '17px' }}>
-            Afi Mensah
+            {ownerName}
           </b>
           <p className="sub">
-            Gérante · Boutique Tokoin
+            {shopName}
           </p>
         </div>
       </div>
@@ -88,12 +97,8 @@ export default function More() {
             <span className="rg">›</span>
           </a>
         ))}
-        <a
-          href="#/login"
-          onClick={(e) => {
-            e.preventDefault()
-            navigate('login')
-          }}
+        <LogoutButton
+          className="more-logout"
           style={{
             display: 'flex',
             width: '100%',
@@ -103,7 +108,6 @@ export default function More() {
             fontWeight: 600,
             textAlign: 'left',
             color: 'var(--tc)',
-            textDecoration: 'none',
           }}
         >
           <span
@@ -118,10 +122,10 @@ export default function More() {
               placeItems: 'center',
             }}
           >
-            <Icon name="back" />
+            <Icon name="logout" />
           </span>
           Déconnexion
-        </a>
+        </LogoutButton>
       </div>
     </section>
   )

@@ -1,7 +1,7 @@
 import { useState, useRef } from 'react'
 import { useApp } from '../context/AppContext'
 import { useAuthContext } from '../context/AuthContext'
-import { COUNTRY_CODES, validatePhone, formatPhone } from '../lib/phone'
+import { COUNTRY_CODES, PHONE_RULES, validatePhone } from '../lib/phone'
 
 export default function Login() {
   const { navigate, showToast } = useApp()
@@ -31,7 +31,9 @@ export default function Login() {
   }
 
   const handlePhoneChange = (value) => {
-    const digits = value.replace(/\D/g, '').slice(0, 8)
+    const rule = PHONE_RULES[countryCode]
+    const max = rule?.length || 8
+    const digits = value.replace(/\D/g, '').slice(0, max)
     setPhone(digits)
     setLocalError('')
   }
@@ -128,14 +130,14 @@ export default function Login() {
             >
               {COUNTRY_CODES.map((c) => (
                 <option key={c.code} value={c.code} disabled={!c.enabled}>
-                  {c.flag} {c.country} {c.code} {c.enabled ? '' : '(À venir)'}
+                  {c.country} {c.code} {c.enabled ? '' : '(À venir)'}
                 </option>
               ))}
             </select>
             <input
               type="tel"
               inputMode="numeric"
-              placeholder={selectedRule?.enabled ? `Ex: ${selectedRule.country} → ${COUNTRY_CODES.find((x)=>x.code===countryCode)?.country || ''}` : 'Bientôt disponible'}
+               placeholder={selectedRule?.enabled ? 'Numéro' : 'Bientôt disponible'}
               value={phone}
               onChange={(e) => handlePhoneChange(e.target.value)}
               disabled={!selectedRule?.enabled}
@@ -160,7 +162,6 @@ export default function Login() {
                   type="password"
                   inputMode="numeric"
                   maxLength={1}
-                  placeholder="•"
                   value={digit}
                   onChange={(e) => handleOtpChange(index, e.target.value)}
                   onKeyDown={(e) => handleOtpKeyDown(index, e)}

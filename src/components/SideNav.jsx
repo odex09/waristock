@@ -1,5 +1,6 @@
 import { useApp } from '../context/AppContext'
 import { Icon } from './Icons'
+import LogoutButton from './LogoutButton'
 
 const ITEMS = [
   ['home', 'Accueil', 'home'],
@@ -43,6 +44,10 @@ export default function SideNav() {
           </a>
         )
       })}
+      <LogoutButton
+        className="side-logout"
+        style={{ marginTop: 'auto' }}
+      />
     </aside>
   )
 }

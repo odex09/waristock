@@ -1,5 +1,11 @@
 import { supabase } from '../lib/supabaseClient'
 
+function getPhoneEmail(countryCode, phone, prefix = 'phone') {
+  const dialingCode = String(countryCode).replace(/\D/g, '')
+  const phoneNumber = String(phone).replace(/\D/g, '')
+  return `${prefix}${dialingCode}${phoneNumber}@waristock.com`
+}
+
 export async function getSession() {
   const {
     data: { session },
@@ -8,16 +14,22 @@ export async function getSession() {
 }
 
 export async function signInWithPhone(countryCode, phone, password) {
-  const email = `${countryCode.replace(/^\+/, '')}${phone}@waristock.com`
   const { data, error } = await supabase.auth.signInWithPassword({
-    email,
+    email: getPhoneEmail(countryCode, phone),
     password,
   })
+
+  if (error?.code === 'invalid_credentials') {
+    return supabase.auth.signInWithPassword({
+      email: getPhoneEmail(countryCode, phone, ''),
+      password,
+    })
+  }
+
   return { data, error }
 }
 
 export async function signUpWithPhone(countryCode, phone, password, shopData) {
-  const email = `${countryCode.replace(/^\+/, '')}${phone}@waristock.com`
   const { data: existing } = await supabase
     .from('profiles')
     .select('id')
@@ -30,7 +42,7 @@ export async function signUpWithPhone(countryCode, phone, password, shopData) {
   }
 
   const { data, error } = await supabase.auth.signUp({
-    email,
+    email: getPhoneEmail(countryCode, phone),
     password,
   })
   if (error) return { data: null, error }

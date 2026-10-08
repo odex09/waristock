@@ -71,6 +71,12 @@ export const ICONS = {
       <path d="M15 5l-7 7 7 7" />
     </svg>
   ),
+  logout: (
+    <svg className="i" viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M10 17l5-5-5-5M15 12H3" />
+      <path d="M12 3h6a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-6" />
+    </svg>
+  ),
   phone: (
     <svg className="i" viewBox="0 0 24 24" aria-hidden="true">
       <path d="M5 3h4l2 5-2.5 1.5a11 11 0 0 0 6 6L16 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 5a2 2 0 0 1 2-2z" />

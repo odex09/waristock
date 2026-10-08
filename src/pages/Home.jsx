@@ -22,12 +22,59 @@ function MovementRow({ m, products }) {
 }
 
 export default function Home() {
-  const { products, navigate, setSelectedId, setMoveType, theme, toggleTheme } = useApp()
+  const {
+    products,
+    movements,
+    navigate,
+    setSelectedId,
+    setMoveType,
+    theme,
+    toggleTheme,
+    auth,
+  } = useApp()
+  const profile = auth.profile
+  const ownerName = profile?.owner_name?.trim()
+  const shopName = profile?.shop_name?.trim() || 'Ma boutique'
+  const location = profile?.city?.trim()
+  const currentHour = new Date().getHours()
+  const greeting = currentHour < 12
+    ? 'Bonjour,'
+    : currentHour < 18
+      ? 'Bon après-midi,'
+      : 'Bonsoir,'
 
   const stockValue = useMemo(
     () => products.reduce((a, p) => a + p[3] * p[6], 0),
     [products]
   )
+
+  const stockChangeThisMonth = useMemo(() => {
+    const currentMonth = new Date().toISOString().slice(0, 7)
+    const monthlyNetByProduct = new Map()
+
+    for (const movement of movements) {
+      if (movement[8]?.slice(0, 7) !== currentMonth || movement[1] < 0) continue
+      const quantity = movement[2] * (movement[0] ? 1 : -1)
+      monthlyNetByProduct.set(
+        movement[1],
+        (monthlyNetByProduct.get(movement[1]) || 0) + quantity
+      )
+    }
+
+    const openingStockValue = products.reduce((total, product, index) => {
+      const createdThisMonth = product[10]?.slice(0, 7) === currentMonth
+      const openingQuantity = createdThisMonth
+        ? 0
+        : Math.max(0, product[3] - (monthlyNetByProduct.get(index) || 0))
+      return total + openingQuantity * product[6]
+    }, 0)
+
+    if (openingStockValue === 0) {
+      return stockValue > 0 ? null : 0
+    }
+
+    return ((stockValue - openingStockValue) / openingStockValue) * 100
+  }, [movements, products, stockValue])
 
   const lowStock = useMemo(
     () => products.filter((p) => p[3] > 0 && p[3] <= p[4]),
@@ -52,8 +99,8 @@ export default function Home() {
     <section className="scr">
       <div className="top">
         <div>
-          <p className="sub">Bonjour,</p>
-          <h1>Afi 👋</h1>
+          <p className="sub">{greeting}</p>
+          <h1>{ownerName || 'Bienvenue'} 👋</h1>
         </div>
         <div style={{ display: 'inline-flex', gap: 8 }}>
           <button
@@ -78,8 +125,8 @@ export default function Home() {
 
       <div className="row sb" style={{ marginBottom: '14px' }}>
         <div className="shop">
-          <i>T</i>
-          Boutique Tokoin · Lomé
+          <i>{shopName.charAt(0).toUpperCase()}</i>
+          {shopName}{location ? ` · ${location}` : ''}
         </div>
         <button
           className="btn s au"
@@ -114,7 +161,11 @@ export default function Home() {
               {F(stockValue)}
               <span>FCFA</span>
             </div>
-            <span className="tr">↑ 6,4 % ce mois</span>
+            <span className="tr">
+              {stockChangeThisMonth === null
+                ? 'Nouveau stock ce mois'
+                : `${stockChangeThisMonth > 0 ? '↑ ' : stockChangeThisMonth < 0 ? '↓ ' : ''}${Math.abs(stockChangeThisMonth).toLocaleString('fr-FR', { maximumFractionDigits: 1 })} % ce mois`}
+            </span>
             <div className="mini">
               <div>
                 <b>{products.length}</b>
@@ -197,7 +248,31 @@ export default function Home() {
             ))}
             {alerts.length === 0 && (
               <div className="card sub" style={{ padding: '30px', textAlign: 'center' }}>
-                Tout est en ordre 🎉
+                Tout est en ordre
+              </div>
+            )}
+          </div>
+
+          <div className="sh" style={{ marginTop: '22px' }}>
+            <h2>Produits récents</h2>
+            <button className="lnk" onClick={() => navigate('products')}>
+              Tout voir
+            </button>
+          </div>
+          <div className="list">
+            {products.slice(0, 3).map((product, index) => (
+              <ProductCard
+                key={product[9] || index}
+                product={product}
+                onClick={() => {
+                  setSelectedId(index)
+                  navigate('detail')
+                }}
+              />
+            ))}
+            {products.length === 0 && (
+              <div className="card sub" style={{ padding: '24px', textAlign: 'center' }}>
+                Aucun produit enregistré.
               </div>
             )}
           </div>
@@ -206,25 +281,12 @@ export default function Home() {
             <h2>Mouvements récents</h2>
           </div>
           <div className="card" style={{ padding: '4px 14px' }}>
-            {products && (
-              <>
-                <MovementRow
-                  m={[1, 3, 12, "Aujourd'hui · 09:14", 'Espèces']}
-                  products={products}
-                />
-                <MovementRow
-                  m={[0, 0, 4, "Aujourd'hui · 08:40", 'Orange Money']}
-                  products={products}
-                />
-                <MovementRow
-                  m={[1, 4, 10, 'Hier · 17:32', 'Moov Money']}
-                  products={products}
-                />
-                <MovementRow
-                  m={[0, 2, 24, 'Hier · 11:05', 'Espèces']}
-                  products={products}
-                />
-              </>
+            {movements.length > 0 ? movements.slice(0, 4).map((movement, index) => (
+              <MovementRow key={`${movement[1]}-${index}`} m={movement} products={products} />
+            )) : (
+              <p className="sub" style={{ padding: '16px 0', textAlign: 'center' }}>
+                Aucun mouvement enregistré.
+              </p>
             )}
           </div>
         </div>

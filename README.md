@@ -1,16 +1,24 @@
-# React + Vite
+# WariStock
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+Application de gestion de stock construite avec React, Vite et Supabase.
 
-Currently, two official plugins are available:
+## Démarrer
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+1. Installer les dépendances avec `npm install`.
+2. Renseigner `VITE_SUPABASE_URL` et `VITE_SUPABASE_ANON_KEY` dans un fichier `.env`.
+3. Lancer `npm run dev` ou créer une version de production avec `npm run build`.
 
-## React Compiler
+## Utilisation hors ligne
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+Après un premier chargement connecté, l’application peut afficher les produits,
+fournisseurs et mouvements précédemment chargés, même sans réseau. Les
+mouvements de stock (y compris les crédits clients) sont conservés sur
+l’appareil et synchronisés à la reconnexion. La bannière en haut indique l’état
+du réseau et les mouvements en attente ; une synchronisation peut aussi être
+demandée manuellement.
 
-## Expanding the Oxlint configuration
-
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and Oxlint's TypeScript related rules in your project.
+La session doit déjà être ouverte sur cet appareil pour accéder aux données
+hors ligne. La création de produits et de fournisseurs, les téléversements de
+photos et les modifications du profil nécessitent encore une connexion.
+L’application utilise le stockage local du navigateur (IndexedDB) pour son
+cache et sa file de synchronisation.

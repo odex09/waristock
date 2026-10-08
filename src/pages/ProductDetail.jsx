@@ -7,10 +7,6 @@ const F = (n) =>
 const cls = ['', 'w', 'r']
 const lab = ['En stock', 'Stock bas', 'Rupture']
 
-function lv(p) {
-  return Math.min(100, Math.round((p[3] / (p[4] * 2)) * 100))
-}
-
 function st(p) {
   return p[3] === 0 ? 2 : p[3] <= p[4] ? 1 : 0
 }
@@ -38,6 +34,11 @@ export default function ProductDetail() {
 
   const s = st(p)
   const mg = Math.round(((p[7] - p[6]) / p[6]) * 100)
+  const stockPercentage = p[3] <= 0
+    ? 0
+    : p[4] <= 0
+      ? 100
+      : Math.min(100, Math.round((p[3] / (p[4] * 2)) * 100))
 
   return (
     <section className="scr">
@@ -65,7 +66,15 @@ export default function ProductDetail() {
           className="th l"
           style={{ margin: '0 auto 12px' }}
         >
-          {p[1]}
+          {p[1]?.startsWith('/') || p[1]?.startsWith('http') ? (
+            <img
+              src={p[1]}
+              alt=""
+              style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 'inherit' }}
+            />
+          ) : (
+            p[1]
+          )}
         </div>
         <h2 style={{ fontSize: '21px' }}>{p[0]}</h2>
         <p
@@ -93,11 +102,16 @@ export default function ProductDetail() {
           {lab[s]} · seuil {p[4]}
         </span>
         <div
-          className={`bar ${cls[s]}`}
+          className="bar"
+          role="progressbar"
+          aria-label={`Niveau de stock de ${p[0]}`}
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-valuenow={stockPercentage}
           style={{ marginTop: '14px' }}
         >
           <div
-            style={{ width: `${Math.max(4, lv(p))}%` }}
+            style={{ width: `${stockPercentage}%` }}
           />
         </div>
       </div>

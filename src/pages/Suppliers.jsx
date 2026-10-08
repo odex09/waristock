@@ -53,13 +53,14 @@ export default function Suppliers() {
               <button
                 className="btn wa s"
                 style={{ flex: 1 }}
-                onClick={() =>
+                onClick={() => {
+                  const phone = s[2].replace(/\D/g, '')
                   window.open(
-                    `https://wa.me/${s[2].slice(1)}`,
+                    `https://wa.me/${phone}`,
                     '_blank',
                     'noopener'
                   )
-                }
+                }}
               >
                 <Icon name="chat" />
                 WhatsApp

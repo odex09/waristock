@@ -1,28 +1,21 @@
 import { useState, useEffect } from 'react'
 import { useApp } from '../context/AppContext'
 import { Icon } from '../components/Icons'
+import { COUNTRY_CODES, PHONE_RULES, validatePhone } from '../lib/phone'
 
-const PAYMENTS = [
-  'Espèces',
-  'Orange Money',
-  'Moov Money',
-  'MTN MoMo',
-  'Wave',
-  'Crédit',
-]
+const CASH_PAYMENT = 'Espèces'
+const CREDIT_PAYMENT = 'Crédit'
 
 export default function Move() {
   const {
     products,
-    setProducts,
     selectedId,
     setSelectedId,
     moveType,
     setMoveType,
     paymentMethod,
     setPaymentMethod,
-    movements,
-    setMovements,
+    recordStockMovement,
     showToast,
     navigate,
   } = useApp()
@@ -30,7 +23,11 @@ export default function Move() {
   const [showCreditModal, setShowCreditModal] = useState(false)
   const [clientName, setClientName] = useState('')
   const [clientPhone, setClientPhone] = useState('')
+  const [clientCountryCode, setClientCountryCode] = useState('+228')
   const [dueDate, setDueDate] = useState('')
+  const [productSearch, setProductSearch] = useState('')
+  const [showProductOptions, setShowProductOptions] = useState(false)
+  const [savingMovement, setSavingMovement] = useState(false)
 
   const getToday = () => {
     const d = new Date()
@@ -38,42 +35,66 @@ export default function Move() {
   }
 
   const p = products[selectedId]
+  const payments = moveType ? [CASH_PAYMENT] : [CASH_PAYMENT, CREDIT_PAYMENT]
+  const filteredProducts = products
+    .map((product, index) => ({ product, index }))
+    .filter(({ product }) =>
+      product[0].toLowerCase().includes(productSearch.trim().toLowerCase())
+    )
 
   useEffect(() => {
     window.scrollTo(0, 0)
   }, [])
 
-  const save = () => {
+  const save = async () => {
+    if (!p) {
+      showToast('Sélectionnez un produit')
+      return
+    }
     const n = qty || 1
     if (!moveType && n > p[3]) {
       showToast(`Stock insuffisant : ${p[3]} ${p[5]}`)
       return
     }
-    if (!moveType && paymentMethod === 5) {
+    if (!moveType && paymentMethod === 1) {
       setShowCreditModal(true)
       return
     }
-    const updated = products.map((prod, i) =>
-      i === selectedId
-        ? [...prod.slice(0, 3), prod[3] + (moveType ? n : -n), ...prod.slice(4)]
-        : prod
-    )
-    setProducts(updated)
-    setMovements([
-      [moveType, selectedId, n, 'À l\'instant', PAYMENTS[paymentMethod]],
-      ...movements,
-    ])
-    showToast(moveType ? 'Entrée enregistrée ✓' : 'Sortie enregistrée ✓')
-    navigate('detail')
+    setSavingMovement(true)
+    try {
+      const { error, pendingSync } = await recordStockMovement({
+        productIndex: selectedId,
+        quantity: n,
+        type: moveType ? 'entry' : 'exit',
+        paymentMethod: 'cash',
+      })
+      if (error) {
+        showToast(error.message || 'Impossible d’enregistrer le mouvement')
+        return
+      }
+      showToast(pendingSync
+        ? 'Mouvement enregistré hors ligne, synchronisation en attente.'
+        : moveType ? 'Entrée enregistrée ✓' : 'Sortie enregistrée ✓')
+      navigate('detail')
+    } catch (error) {
+      showToast(error.message || 'Impossible d’enregistrer le mouvement')
+    } finally {
+      setSavingMovement(false)
+    }
   }
 
-  const confirmCredit = () => {
+  const confirmCredit = async () => {
+    if (!p) {
+      showToast('Sélectionnez un produit')
+      return
+    }
     if (!clientName.trim()) {
       showToast('Veuillez entrer le nom du client')
       return
     }
-    if (!clientPhone.trim()) {
-      showToast('Veuillez entrer le numéro de téléphone')
+    const phoneValidation = validatePhone(clientCountryCode, clientPhone)
+    if (!phoneValidation.valid) {
+      showToast(phoneValidation.message)
       return
     }
     if (!dueDate) {
@@ -84,23 +105,35 @@ export default function Move() {
       showToast('La date d\'échéance ne peut pas être dans le passé')
       return
     }
-    const n = qty || 1
-    const updated = products.map((prod, i) =>
-      i === selectedId
-        ? [...prod.slice(0, 3), prod[3] + (moveType ? n : -n), ...prod.slice(4)]
-        : prod
-    )
-    setProducts(updated)
-    setMovements([
-      [moveType, selectedId, n, 'À l\'instant', PAYMENTS[paymentMethod], clientName.trim(), clientPhone.trim(), dueDate, new Date().toISOString().split('T')[0]],
-      ...movements,
-    ])
-    setShowCreditModal(false)
-    setClientName('')
-    setClientPhone('')
-    setDueDate('')
-    showToast('Sortie enregistrée ✓')
-    navigate('detail')
+    setSavingMovement(true)
+    try {
+      const { error, pendingSync } = await recordStockMovement({
+        productIndex: selectedId,
+        quantity: qty || 1,
+        type: 'exit',
+        paymentMethod: 'credit',
+        clientName: clientName.trim(),
+        clientPhone: `${clientCountryCode}${clientPhone}`,
+        dueDate,
+      })
+      if (error) {
+        showToast(error.message || 'Impossible d’enregistrer le crédit')
+        return
+      }
+      setShowCreditModal(false)
+      setClientName('')
+      setClientPhone('')
+      setClientCountryCode('+228')
+      setDueDate('')
+      showToast(pendingSync
+        ? 'Crédit enregistré hors ligne, synchronisation en attente.'
+        : 'Crédit client enregistré avec succès ✓')
+      navigate('detail')
+    } catch (error) {
+      showToast(error.message || 'Impossible d’enregistrer le crédit')
+    } finally {
+      setSavingMovement(false)
+    }
   }
 
   return (
@@ -123,13 +156,19 @@ export default function Move() {
       <div className="seg">
         <button
           className={`in ${moveType ? 'on' : ''}`}
-          onClick={() => setMoveType(1)}
+          onClick={() => {
+            setMoveType(1)
+            setPaymentMethod(0)
+          }}
         >
           Entrée
         </button>
         <button
           className={`ou ${!moveType ? 'on' : ''}`}
-          onClick={() => setMoveType(0)}
+          onClick={() => {
+            setMoveType(0)
+            setPaymentMethod(0)
+          }}
         >
           Sortie
         </button>
@@ -141,24 +180,67 @@ export default function Move() {
           save()
         }}
       >
-        <label className="fld">
+        <div className="fld product-picker">
           <span>Produit</span>
-          <select
-            value={selectedId}
-            onChange={(e) => {
-              setSelectedId(+e.target.value)
+          <input
+            type="search"
+            role="combobox"
+            aria-label="Rechercher un produit"
+            aria-autocomplete="list"
+            aria-expanded={showProductOptions}
+            aria-controls="move-product-options"
+            placeholder={products.length ? 'Rechercher un produit...' : 'Aucun produit enregistré'}
+            value={showProductOptions ? productSearch : p?.[0] || ''}
+            disabled={products.length === 0}
+            onFocus={() => {
+              setProductSearch('')
+              setShowProductOptions(true)
             }}
-          >
-            {products.map((x, i) => (
-              <option
-                key={i}
-                value={i}
-              >
-                {x[1]} {x[0]}
-              </option>
-            ))}
-          </select>
-        </label>
+            onChange={(event) => {
+              setProductSearch(event.target.value)
+              setShowProductOptions(true)
+            }}
+            onKeyDown={(event) => {
+              if (event.key === 'Escape') {
+                setShowProductOptions(false)
+              } else if (event.key === 'Enter' && showProductOptions) {
+                event.preventDefault()
+                const firstMatch = filteredProducts[0]
+                if (firstMatch) {
+                  setSelectedId(firstMatch.index)
+                  setShowProductOptions(false)
+                }
+              }
+            }}
+            onBlur={() => setShowProductOptions(false)}
+          />
+          {showProductOptions && (
+            <div
+              className="product-picker-options"
+              id="move-product-options"
+              role="listbox"
+            >
+              {filteredProducts.length ? filteredProducts.map(({ product, index }) => (
+                <button
+                  type="button"
+                  role="option"
+                  aria-selected={index === selectedId}
+                  key={product[9] || index}
+                  onMouseDown={(event) => event.preventDefault()}
+                  onClick={() => {
+                    setSelectedId(index)
+                    setProductSearch('')
+                    setShowProductOptions(false)
+                  }}
+                >
+                  {product[0]}
+                </button>
+              )) : (
+                <span className="sub">Aucun produit trouvé.</span>
+              )}
+            </div>
+          )}
+        </div>
 
         <span
           className="sub"
@@ -206,8 +288,8 @@ export default function Move() {
         >
           {moveType ? 'Payé par' : 'Encaissé par'}
         </span>
-        <div className="pay">
-          {PAYMENTS.map((m, i) => (
+        <div className="pay" style={{ gridTemplateColumns: `repeat(${payments.length}, 1fr)` }}>
+          {payments.map((m, i) => (
             <button
               key={i}
               type="button"
@@ -225,8 +307,9 @@ export default function Move() {
             !moveType ? { background: 'var(--tc)' } : {}
           }
           type="submit"
+          disabled={savingMovement}
         >
-          {moveType
+          {savingMovement ? 'Enregistrement...' : moveType
             ? 'Enregistrer l\'entrée'
             : 'Enregistrer la sortie'}
         </button>
@@ -245,16 +328,41 @@ export default function Move() {
                 onChange={(e) => setClientName(e.target.value)}
               />
             </div>
-            <div className="fld">
+            <label className="fld">
               <span>Numéro WhatsApp</span>
-              <input
-                type="tel"
-                inputMode="numeric"
-                placeholder="90 12 34 56"
-                value={clientPhone}
-                onChange={(e) => setClientPhone(e.target.value)}
-              />
-            </div>
+              <div className="ph">
+                <select
+                  aria-label="Indicatif du client"
+                  value={clientCountryCode}
+                  onChange={(event) => {
+                    setClientCountryCode(event.target.value)
+                    setClientPhone('')
+                  }}
+                >
+                  {COUNTRY_CODES.filter((country) => country.enabled).map((country) => (
+                    <option key={country.code} value={country.code}>
+                      {country.flag} {country.code}
+                    </option>
+                  ))}
+                </select>
+                <input
+                  type="tel"
+                  inputMode="numeric"
+                  placeholder={PHONE_RULES[clientCountryCode]?.format || 'Numéro'}
+                  value={clientPhone}
+                  onChange={(event) => {
+                    const maxLength = PHONE_RULES[clientCountryCode]?.length || 0
+                    setClientPhone(event.target.value.replace(/\D/g, '').slice(0, maxLength))
+                  }}
+                  aria-label="Numéro de téléphone du client"
+                />
+              </div>
+              <small className="sub">
+                {COUNTRY_CODES.find((country) => country.code === clientCountryCode)?.country}
+                {' · Format : '}
+                {PHONE_RULES[clientCountryCode]?.format}
+              </small>
+            </label>
             <div className="fld">
               <span>Date d'échéance</span>
               <input
@@ -268,7 +376,8 @@ export default function Move() {
               <button
                 className="btn o"
                 type="button"
-                onClick={() => setShowCreditModal(false)}
+                onClick={() => !savingMovement && setShowCreditModal(false)}
+                disabled={savingMovement}
               >
                 Annuler
               </button>
@@ -276,8 +385,9 @@ export default function Move() {
                 className="btn au"
                 type="button"
                 onClick={confirmCredit}
+                disabled={savingMovement}
               >
-                Valider
+                {savingMovement ? 'Enregistrement...' : 'Valider'}
               </button>
             </div>
           </div>

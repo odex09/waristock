@@ -5,6 +5,9 @@ import path from 'path'
 
 export default defineConfig({
   plugins: [react(), tailwindcss()],
+  build: {
+    manifest: 'vite-manifest.json',
+  },
   resolve: {
     alias: {
       '@': path.resolve(import.meta.dirname, './src'),

@@ -1,6 +1,8 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useApp } from '../context/AppContext'
 import { Icon } from '../components/Icons'
+import { uploadProductImage } from '../services/upload'
+import { COUNTRY_CODES, PHONE_RULES, validatePhone } from '../lib/phone'
 
 const CATEGORIES = [
   'Céréales',
@@ -12,7 +14,7 @@ const CATEGORIES = [
 ]
 
 export default function AddProduct() {
-  const { suppliers, addProduct, addSupplier, showToast, navigate } = useApp()
+  const { suppliers, addProduct, addSupplier, showToast, navigate, auth } = useApp()
   const [form, setForm] = useState({
     name: '',
     category: '',
@@ -28,45 +30,128 @@ export default function AddProduct() {
     categories: '',
     phone: '',
   })
+  const [supplierCountryCode, setSupplierCountryCode] = useState('+228')
+  const [productImage, setProductImage] = useState(null)
+  const [imagePreview, setImagePreview] = useState('')
+  const [saving, setSaving] = useState(false)
+
+  useEffect(() => {
+    if (!productImage) {
+      setImagePreview('')
+      return undefined
+    }
+
+    const previewUrl = URL.createObjectURL(productImage)
+    setImagePreview(previewUrl)
+    return () => URL.revokeObjectURL(previewUrl)
+  }, [productImage])
 
   const update = (field, value) => {
     setForm((f) => ({ ...f, [field]: value }))
   }
 
-  const save = () => {
+  const updateSupplierPhone = (value) => {
+    const maxLength = PHONE_RULES[supplierCountryCode]?.length || 0
+    setNewSupplier((supplier) => ({
+      ...supplier,
+      phone: value.replace(/\D/g, '').slice(0, maxLength),
+    }))
+  }
+
+  const save = async () => {
     if (!form.name.trim()) {
       showToast('Nom du produit requis')
       return
     }
 
-    let supplierId = form.supplierId
-    if (supplierId === '__new__') {
-      if (!newSupplier.name.trim() || !newSupplier.phone.trim()) {
-        showToast('Nom et téléphone du fournisseur requis')
-        return
-      }
-      const created = [
-        newSupplier.name.trim(),
-        newSupplier.categories.trim(),
-        newSupplier.phone.trim(),
-      ]
-      addSupplier(created)
-      supplierId = String(suppliers.length)
+    if (!auth.user?.id) {
+      showToast('Votre session a expiré. Reconnectez-vous puis réessayez.')
+      return
     }
 
-    addProduct({
-      name: form.name.trim(),
-      emoji: '',
-      category: form.category || CATEGORIES[0],
-      stock: Number(form.stock) || 0,
-      threshold: Number(form.threshold) || 0,
-      unit: form.unit || 'sacs',
-      buyPrice: Number(form.buyPrice) || 0,
-      sellPrice: Number(form.sellPrice) || 0,
-      supplierId: Number(supplierId),
-    })
-    showToast('Produit ajouté ✓')
-    navigate('products')
+    const extensionByType = {
+      'image/jpeg': 'jpg',
+      'image/png': 'png',
+      'image/webp': 'webp',
+      'image/gif': 'gif',
+    }
+    if (productImage && (!extensionByType[productImage.type] || productImage.size > 5 * 1024 * 1024)) {
+      showToast('Choisissez une image JPG, PNG, WebP ou GIF de 5 Mo maximum')
+      return
+    }
+    let supplierPhone = ''
+    if (form.supplierId === '__new__') {
+      if (!newSupplier.name.trim()) {
+        showToast('Nom du fournisseur requis')
+        return
+      }
+      const validation = validatePhone(supplierCountryCode, newSupplier.phone)
+      if (!validation.valid) {
+        showToast(validation.message)
+        return
+      }
+      supplierPhone = `${supplierCountryCode}${newSupplier.phone}`
+    }
+
+    setSaving(true)
+    try {
+      let supplierId = form.supplierId
+      let supplierIndex = suppliers.findIndex((supplier) => supplier[3] === supplierId)
+      if (supplierId === '__new__') {
+        const { data, error } = await addSupplier([
+          newSupplier.name.trim(),
+          newSupplier.categories.trim(),
+          supplierPhone,
+        ])
+        if (error) {
+          showToast(error.message || 'Impossible d’ajouter le fournisseur')
+          return
+        }
+        supplierId = data[3]
+        supplierIndex = suppliers.length
+      }
+
+      let image = '/favicon.svg'
+      if (productImage) {
+        const { data, error } = await uploadProductImage(
+          productImage,
+          auth.user.id,
+          `${crypto.randomUUID()}.${extensionByType[productImage.type]}`
+        )
+        if (error) {
+          showToast(error.message || 'Impossible de téléverser la photo')
+          return
+        }
+        image = data.path
+      }
+
+      const { error, imageError } = await addProduct({
+        name: form.name.trim(),
+        image,
+        category: form.category || CATEGORIES[0],
+        stock: Number(form.stock) || 0,
+        threshold: Number(form.threshold) || 0,
+        unit: form.unit || 'sacs',
+        buyPrice: Number(form.buyPrice) || 0,
+        sellPrice: Number(form.sellPrice) || 0,
+        supplierId,
+        supplierIndex,
+      })
+      if (error) {
+        showToast(error.message || 'Impossible d’enregistrer le produit')
+        return
+      }
+      showToast(
+        imageError
+          ? `Produit ajouté, mais la photo n’a pas pu être affichée : ${imageError.message}`
+          : 'Produit créé avec succès ✓'
+      )
+      navigate('products')
+    } catch (error) {
+      showToast(error.message || 'Une erreur est survenue pendant l’enregistrement')
+    } finally {
+      setSaving(false)
+    }
   }
 
   return (
@@ -101,18 +186,28 @@ export default function AddProduct() {
           }}
         >
           <img
-            src="/favicon.svg"
-            alt="WariStock"
+            src={imagePreview || '/favicon.svg'}
+            alt={productImage ? 'Aperçu de la photo du produit' : 'Logo WariStock par défaut'}
             style={{
-              width: 56,
-              height: 56,
+              width: 88,
+              height: 88,
               borderRadius: 16,
+              objectFit: 'cover',
               display: 'inline-block',
             }}
           />
           <p className="sub" style={{ marginTop: 8 }}>
-            Logo du produit
+            {productImage ? productImage.name : 'Logo WariStock par défaut'}
           </p>
+          <label className="btn o s" style={{ display: 'inline-flex', marginTop: 8, cursor: 'pointer' }}>
+            Choisir une photo
+            <input
+              type="file"
+              accept="image/jpeg,image/png,image/webp,image/gif"
+              onChange={(event) => setProductImage(event.target.files?.[0] || null)}
+              style={{ display: 'none' }}
+            />
+          </label>
         </div>
 
         <label className="fld">
@@ -199,9 +294,9 @@ export default function AddProduct() {
             value={form.supplierId}
             onChange={(e) => update('supplierId', e.target.value)}
           >
-            <option value="">Sélectionner un fournisseur</option>
-            {suppliers.map((s, i) => (
-              <option key={i} value={String(i)}>
+            <option value="">Sélectionner ou saisir un fournisseur</option>
+            {suppliers.map((s) => (
+              <option key={s[3]} value={s[3]}>
                 {s[0]}
               </option>
             ))}
@@ -237,15 +332,35 @@ export default function AddProduct() {
             </label>
             <label className="fld" style={{ margin: 0 }}>
               <span>WhatsApp / Téléphone</span>
-              <input
-                type="tel"
-                inputMode="numeric"
-                value={newSupplier.phone}
-                onChange={(e) =>
-                  setNewSupplier((s) => ({ ...s, phone: e.target.value }))
-                }
-                placeholder="Ex: +22890123456"
-              />
+              <div className="ph">
+                <select
+                  aria-label="Indicatif du fournisseur"
+                  value={supplierCountryCode}
+                  onChange={(event) => {
+                    setSupplierCountryCode(event.target.value)
+                    setNewSupplier((supplier) => ({ ...supplier, phone: '' }))
+                  }}
+                >
+                  {COUNTRY_CODES.filter((country) => country.enabled).map((country) => (
+                    <option key={country.code} value={country.code}>
+                      {country.flag} {country.code}
+                    </option>
+                  ))}
+                </select>
+                <input
+                  type="tel"
+                  inputMode="numeric"
+                  value={newSupplier.phone}
+                  onChange={(event) => updateSupplierPhone(event.target.value)}
+                  placeholder={PHONE_RULES[supplierCountryCode]?.format || 'Numéro'}
+                  aria-label="Numéro de téléphone du fournisseur"
+                />
+              </div>
+              <small className="sub">
+                {COUNTRY_CODES.find((country) => country.code === supplierCountryCode)?.country}
+                {' · Format : '}
+                {PHONE_RULES[supplierCountryCode]?.format}
+              </small>
             </label>
           </div>
         )}
@@ -254,8 +369,9 @@ export default function AddProduct() {
           className="btn f"
           type="submit"
           style={{ marginTop: 8 }}
+          disabled={saving}
         >
-          Ajouter le produit
+          {saving ? 'Enregistrement...' : 'Ajouter le produit'}
         </button>
       </form>
     </section>

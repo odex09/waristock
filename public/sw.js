@@ -1,59 +1,92 @@
-const CACHE_NAME = 'waristock-v2'
-const urlsToCache = [
+const CACHE_NAME = 'waristock-shell-v3'
+const APP_SHELL = [
   '/',
   '/index.html',
-  '/src/main.jsx',
-  '/src/App.jsx',
-  '/src/index.css',
-  '/src/context/AppContext.jsx',
-  '/src/components/Icons.jsx',
-  '/src/components/BottomNav.jsx',
-  '/src/components/SideNav.jsx',
-  '/src/components/ProductCard.jsx',
-  '/src/pages/Login.jsx',
-  '/src/pages/Register.jsx',
-  '/src/pages/Home.jsx',
-  '/src/pages/Products.jsx',
-  '/src/pages/ProductDetail.jsx',
-  '/src/pages/Move.jsx',
-  '/src/pages/Alerts.jsx',
-  '/src/pages/Suppliers.jsx',
-  '/src/pages/Inventory.jsx',
-  '/src/pages/Reports.jsx',
-  '/src/pages/Settings.jsx',
-  '/src/pages/More.jsx',
-  '/src/pages/Clients.jsx',
+  '/manifest.json',
+  '/favicon.svg',
   '/icon-180.png',
   '/icon-192.png',
   '/icon-512.png',
-  '/favicon.svg',
-  'https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght=12..96,400;12..96,600;12..96,700;12..96,800&display=swap'
 ]
+const API_PATHS = ['/auth/v1/', '/rest/v1/', '/storage/v1/', '/functions/v1/']
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(urlsToCache))
-  )
-})
-
-self.addEventListener('fetch', (event) => {
-  if (event.request.method !== 'GET') return
-  event.respondWith(
-    caches.match(event.request).then((cached) => {
-      const fetchPromise = fetch(event.request).then((networkResponse) => {
-        if (networkResponse && networkResponse.status === 200) {
-          const clone = networkResponse.clone()
-          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone))
+    caches.open(CACHE_NAME)
+      .then(async (cache) => {
+        const response = await fetch('/vite-manifest.json')
+        if (!response.ok) {
+          throw new Error(`Impossible de lire le manifeste de production (${response.status}).`)
         }
-        return networkResponse
-      }).catch(() => cached)
-      return cached || fetchPromise
-    })
+        const manifest = await response.json()
+        const buildAssets = Object.values(manifest).flatMap((entry) => [
+          entry.file,
+          ...(entry.css || []),
+          ...(entry.assets || []),
+        ])
+        const uniqueAssets = [...new Set(buildAssets)]
+          .filter(Boolean)
+          .map((asset) => asset.startsWith('/') ? asset : `/${asset}`)
+        await cache.addAll([...APP_SHELL, ...uniqueAssets])
+      })
+      .then(() => self.skipWaiting())
   )
 })
 
 self.addEventListener('activate', (event) => {
   event.waitUntil(
-    caches.keys().then((keys) => Promise.all(keys.filter((k) => k !== CACHE_NAME).map((k) => caches.delete(k))))
+    caches.keys()
+      .then((keys) => Promise.all(
+        keys.filter((key) => key.startsWith('waristock-') && key !== CACHE_NAME)
+          .map((key) => caches.delete(key))
+      ))
+      .then(() => self.clients.claim())
+  )
+})
+
+self.addEventListener('fetch', (event) => {
+  const { request } = event
+  if (request.method !== 'GET') return
+
+  const url = new URL(request.url)
+  if (url.origin !== self.location.origin) return
+  if (API_PATHS.some((path) => url.pathname.includes(path))) return
+
+  if (request.mode === 'navigate') {
+    event.respondWith(
+      fetch(request)
+        .then(async (response) => {
+          if (response.ok) {
+            const copy = response.clone()
+            await caches.open(CACHE_NAME).then((cache) => cache.put('/index.html', copy))
+          }
+          return response
+        })
+        .catch(async () => (
+          await caches.match('/index.html') ||
+          new Response('WariStock est indisponible hors ligne.', {
+            status: 503,
+            headers: { 'Content-Type': 'text/plain; charset=utf-8' },
+          })
+        ))
+    )
+    return
+  }
+
+  if (!/\.(?:js|css|svg|png|jpg|jpeg|webp|gif|woff2?|ttf|ico|json)$/i.test(url.pathname)) return
+  const refresh = fetch(request)
+    .then((response) => {
+      if (response.ok) {
+        const copy = response.clone()
+        return caches.open(CACHE_NAME).then((cache) => cache.put(request, copy)).then(() => response)
+      }
+      return response
+    })
+    .catch(() => null)
+  event.waitUntil(refresh)
+  event.respondWith(
+    caches.match(request).then((cached) =>
+      cached || refresh.then((response) => response || new Response('', { status: 504 }))
+    )
   )
 })

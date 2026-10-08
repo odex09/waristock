@@ -1,8 +1,43 @@
+import { useState } from 'react'
 import { useApp } from '../context/AppContext'
 import { Icon } from '../components/Icons'
 
 export default function Settings() {
-  const { economyMode, setEconomyMode, showToast, navigate } = useApp()
+  const { economyMode, setEconomyMode, showToast, navigate, auth } = useApp()
+  const [profileDraft, setProfileDraft] = useState(null)
+  const profile = profileDraft || auth.profile || {
+    shop_name: '',
+    owner_name: '',
+    city: '',
+    currency: 'XOF',
+  }
+
+  const updateField = (field, value) => {
+    setProfileDraft((current) => ({
+      ...(current || auth.profile || {}),
+      [field]: value,
+    }))
+  }
+
+  const saveSettings = async () => {
+    if (!profile.shop_name.trim()) {
+      showToast('Nom de la boutique requis')
+      return
+    }
+
+    const { error } = await auth.updateProfile({
+      shop_name: profile.shop_name.trim(),
+      owner_name: profile.owner_name.trim(),
+      city: profile.city.trim(),
+      currency: profile.currency,
+    })
+    if (error) {
+      showToast(error.message || 'Impossible d’enregistrer les paramètres')
+      return
+    }
+
+    showToast('Paramètres enregistrés ✓')
+  }
 
   return (
     <section className="scr n">
@@ -29,14 +64,24 @@ export default function Settings() {
           <span>Nom de la boutique</span>
           <input
             type="text"
-            defaultValue="Boutique Tokoin"
+            value={profile.shop_name}
+            onChange={(event) => updateField('shop_name', event.target.value)}
+          />
+        </label>
+        <label className="fld">
+          <span>Nom du gérant</span>
+          <input
+            type="text"
+            value={profile.owner_name}
+            onChange={(event) => updateField('owner_name', event.target.value)}
           />
         </label>
         <label className="fld">
           <span>Ville / Pays</span>
           <input
             type="text"
-            defaultValue="Lomé, Togo"
+            value={profile.city}
+            onChange={(event) => updateField('city', event.target.value)}
           />
         </label>
         <label
@@ -44,10 +89,10 @@ export default function Settings() {
           style={{ margin: 0 }}
         >
           <span>Devise</span>
-          <select>
-            <option>FCFA (XOF)</option>
-            <option>GNF</option>
-            <option>GHS</option>
+          <select value={profile.currency} onChange={(event) => updateField('currency', event.target.value)}>
+            <option value="XOF">FCFA (XOF)</option>
+            <option value="GNF">GNF</option>
+            <option value="GHS">GHS</option>
           </select>
         </label>
       </div>
@@ -88,34 +133,14 @@ export default function Settings() {
             aria-checked={!!economyMode}
           />
         </button>
-        <button
-          onClick={() =>
-            showToast('Sauvegarde envoyée ✓')
-          }
-          style={{
-            display: 'flex',
-            width: '100%',
-            alignItems: 'center',
-            gap: '14px',
-            padding: '16px 4px',
-            fontWeight: 600,
-            textAlign: 'left',
-            background: 'none',
-            border: 'none',
-            color: 'inherit',
-            font: 'inherit',
-            cursor: 'pointer',
-          }}
-        >
-          Sauvegarder maintenant
-          <span className="rg">›</span>
-        </button>
       </div>
 
       <button
         className="btn f"
         style={{ marginTop: '16px' }}
-        onClick={() => showToast('Paramètres enregistrés ✓')}
+        type="button"
+        onClick={saveSettings}
+        disabled={auth.loading}
       >
         Enregistrer
       </button>

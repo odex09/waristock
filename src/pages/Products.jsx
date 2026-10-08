@@ -6,12 +6,12 @@ import ProductCard from '../components/ProductCard'
 export default function Products() {
   const {
     products,
+    loading,
     searchQuery,
     setSearchQuery,
     category,
     setCategory,
     setSelectedId,
-    setMoveType,
     navigate,
   } = useApp()
 
@@ -37,10 +37,9 @@ export default function Products() {
         <button
           className="ib"
           onClick={() => {
-            setMoveType(1)
-            navigate('move')
+            navigate('addProduct')
           }}
-          aria-label="Ajouter"
+          aria-label="Ajouter un produit"
         >
           <Icon name="plus" />
         </button>
@@ -70,7 +69,11 @@ export default function Products() {
       </div>
 
       <div className="list c2">
-        {filtered.length > 0 ? (
+        {loading ? (
+          <div className="card sub" style={{ textAlign: 'center', padding: '30px' }}>
+            Chargement des produits...
+          </div>
+        ) : filtered.length > 0 ? (
           filtered.map(([p, i]) => (
             <ProductCard
               key={i}

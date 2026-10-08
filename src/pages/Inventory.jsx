@@ -3,7 +3,7 @@ import { useApp } from '../context/AppContext'
 import { Icon } from '../components/Icons'
 
 export default function Inventory() {
-  const { products, setProducts, showToast, navigate } = useApp()
+  const { products, setProducts, showToast, navigate, isOnline } = useApp()
   const [counts, setCounts] = useState(
     products.map((p) => p[3])
   )
@@ -49,7 +49,25 @@ export default function Inventory() {
             key={i}
             className="card pr"
           >
-            <div className="th">{p[1]}</div>
+            <div className="th">
+              {p[1]?.startsWith('/') || p[1]?.startsWith('http') ? (
+                <img
+                  src={p[1]}
+                  alt=""
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'cover',
+                    borderRadius: 'inherit',
+                  }}
+                  onError={(event) => {
+                    event.currentTarget.src = '/favicon.svg'
+                  }}
+                />
+              ) : (
+                p[1] || <img src="/favicon.svg" alt="" />
+              )}
+            </div>
             <div>
               <b>{p[0]}</b>
               <span className="sub">
@@ -77,8 +95,9 @@ export default function Inventory() {
         className="btn f"
         style={{ marginTop: '16px' }}
         onClick={validate}
+        disabled={!isOnline}
       >
-        Valider l'inventaire
+        {isOnline ? "Valider l'inventaire" : 'Connexion requise pour valider'}
       </button>
     </section>
   )
