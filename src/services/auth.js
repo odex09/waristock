@@ -7,10 +7,8 @@ function getPhoneEmail(countryCode, phone, prefix = 'phone') {
 }
 
 export async function getSession() {
-  const {
-    data: { session },
-  } = await supabase.auth.getSession()
-  return session
+  const { data, error } = await supabase.auth.getSession()
+  return { session: data.session, error }
 }
 
 export async function signInWithPhone(countryCode, phone, password) {

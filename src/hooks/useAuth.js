@@ -15,6 +15,11 @@ import {
   updateProfile as saveProfile,
 } from '../services/auth'
 
+function isNetworkError(error) {
+  return error instanceof TypeError ||
+    /network|fetch|offline|connection/i.test(error?.message || '')
+}
+
 const initialState = {
   user: null,
   profile: null,
@@ -27,7 +32,34 @@ export function useAuth() {
 
   const loadSession = useCallback(async () => {
     try {
-      const session = await getSession()
+      const { session, error: sessionError } = await getSession()
+      if (!session) {
+        if (!navigator.onLine) {
+          const offlineUserId = await getOfflineUserId()
+          if (offlineUserId) {
+            const cachedProfile = await getCachedProfile(offlineUserId)
+            if (cachedProfile) {
+              setState({
+                user: { id: offlineUserId },
+                profile: cachedProfile,
+                loading: false,
+                error: null,
+              })
+              return
+            }
+          }
+        } else {
+          await clearOfflineUserId()
+        }
+
+        setState({
+          ...initialState,
+          loading: false,
+          error: sessionError,
+        })
+        return
+      }
+
       if (session?.user) {
         let cachedProfile = null
         try {
@@ -87,8 +119,10 @@ export function useAuth() {
             console.warn('Impossible de mémoriser le compte hors ligne :', cacheError)
           }
         }
-      } else {
-        if (!navigator.onLine) {
+      }
+    } catch (error) {
+      if (!navigator.onLine || isNetworkError(error)) {
+        try {
           const offlineUserId = await getOfflineUserId()
           if (offlineUserId) {
             const cachedProfile = await getCachedProfile(offlineUserId)
@@ -102,16 +136,11 @@ export function useAuth() {
               return
             }
           }
+        } catch (cacheError) {
+          console.warn('Impossible de restaurer la session hors ligne :', cacheError)
         }
-        try {
-          await clearOfflineUserId()
-        } catch (error) {
-          console.warn('Impossible d’effacer le compte hors ligne :', error)
-        }
-        setState({ ...initialState, loading: false })
       }
-    } catch (error) {
-      setState((s) => ({ ...s, loading: false, error }))
+      setState({ ...initialState, loading: false, error })
     }
   }, [])
 
@@ -141,7 +170,11 @@ export function useAuth() {
 
   useEffect(() => {
     window.addEventListener('online', loadSession)
-    return () => window.removeEventListener('online', loadSession)
+    window.addEventListener('offline', loadSession)
+    return () => {
+      window.removeEventListener('online', loadSession)
+      window.removeEventListener('offline', loadSession)
+    }
   }, [loadSession])
 
   const login = useCallback(async (countryCode, phone, password) => {

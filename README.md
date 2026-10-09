@@ -27,6 +27,10 @@ ne demande pas une nouvelle connexion tant que la session reste valide. Si la
 session expire hors ligne, l’accès hors ligne peut être restauré uniquement
 pour un compte déjà connecté sur cet appareil et disposant d’un profil en cache.
 À la reconnexion, la session est vérifiée à nouveau auprès de Supabase.
+Le service worker hors ligne est activé en production, pas avec `npm run dev`.
+Pour le tester localement, lancez `npm run build`, puis `npm run preview`,
+ouvrez la PWA en ligne une première fois et attendez son chargement complet
+avant de couper le réseau.
 
 ## URLs
 

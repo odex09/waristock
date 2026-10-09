@@ -1,4 +1,4 @@
-const CACHE_NAME = 'waristock-shell-v3'
+const CACHE_NAME = 'waristock-shell-v4'
 const APP_SHELL = [
   '/',
   '/index.html',
@@ -74,6 +74,7 @@ self.addEventListener('fetch', (event) => {
   }
 
   if (!/\.(?:js|css|svg|png|jpg|jpeg|webp|gif|woff2?|ttf|ico|json)$/i.test(url.pathname)) return
+  const cachedAsset = caches.open(CACHE_NAME).then((cache) => cache.match(request))
   const refresh = fetch(request)
     .then((response) => {
       if (response.ok) {
@@ -85,7 +86,7 @@ self.addEventListener('fetch', (event) => {
     .catch(() => null)
   event.waitUntil(refresh)
   event.respondWith(
-    caches.match(request).then((cached) =>
+    cachedAsset.then((cached) =>
       cached || refresh.then((response) => response || new Response('', { status: 504 }))
     )
   )
