@@ -326,7 +326,9 @@ $$ language plpgsql security invoker;
 
 insert into storage.buckets (id, name, public)
 values ('product-images', 'product-images', false)
-on conflict (id) do nothing;
+on conflict (id) do update
+set file_size_limit = 307200,
+    allowed_mime_types = array['image/webp'];
 
 -- Politiques de stockage (chemin attendu: {user_id}/{filename})
 create policy "Les utilisateurs peuvent voir leurs images"

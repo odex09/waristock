@@ -323,6 +323,7 @@ export default function Move() {
               <span>Nom du client</span>
               <input
                 type="text"
+                maxLength={120}
                 placeholder="Ex: Aminata K."
                 value={clientName}
                 onChange={(e) => setClientName(e.target.value)}

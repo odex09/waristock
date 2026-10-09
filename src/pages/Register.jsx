@@ -129,6 +129,7 @@ export default function Register() {
             <span>Nom de la boutique</span>
             <input
               type="text"
+              maxLength={100}
               placeholder="Ex: Boutique Tokoin"
               value={shopName}
               onChange={(e) => setShopName(e.target.value)}
@@ -138,6 +139,7 @@ export default function Register() {
             <span>Nom du gérant</span>
             <input
               type="text"
+              maxLength={100}
               placeholder="Ex: Afi Mensah"
               value={ownerName}
               onChange={(e) => setOwnerName(e.target.value)}

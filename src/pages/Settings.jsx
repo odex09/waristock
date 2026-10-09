@@ -64,6 +64,7 @@ export default function Settings() {
           <span>Nom de la boutique</span>
           <input
             type="text"
+            maxLength={100}
             value={profile.shop_name}
             onChange={(event) => updateField('shop_name', event.target.value)}
           />
@@ -72,6 +73,7 @@ export default function Settings() {
           <span>Nom du gérant</span>
           <input
             type="text"
+            maxLength={100}
             value={profile.owner_name}
             onChange={(event) => updateField('owner_name', event.target.value)}
           />
@@ -80,6 +82,7 @@ export default function Settings() {
           <span>Ville / Pays</span>
           <input
             type="text"
+            maxLength={100}
             value={profile.city}
             onChange={(event) => updateField('city', event.target.value)}
           />

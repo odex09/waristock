@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useApp } from '../context/AppContext'
 import { Icon } from '../components/Icons'
-import { uploadProductImage } from '../services/upload'
+import { removeProductImage, uploadProductImage } from '../services/upload'
 import { COUNTRY_CODES, PHONE_RULES, validatePhone } from '../lib/phone'
 
 const CATEGORIES = [
@@ -69,14 +69,9 @@ export default function AddProduct() {
       return
     }
 
-    const extensionByType = {
-      'image/jpeg': 'jpg',
-      'image/png': 'png',
-      'image/webp': 'webp',
-      'image/gif': 'gif',
-    }
-    if (productImage && (!extensionByType[productImage.type] || productImage.size > 5 * 1024 * 1024)) {
-      showToast('Choisissez une image JPG, PNG, WebP ou GIF de 5 Mo maximum')
+    const supportedImageTypes = ['image/jpeg', 'image/png', 'image/webp']
+    if (productImage && (!supportedImageTypes.includes(productImage.type) || productImage.size > 5 * 1024 * 1024)) {
+      showToast('Choisissez une image JPG, PNG ou WebP de 5 Mo maximum')
       return
     }
     let supplierPhone = ''
@@ -94,6 +89,7 @@ export default function AddProduct() {
     }
 
     setSaving(true)
+    let uploadedImagePath = null
     try {
       let supplierId = form.supplierId
       let supplierIndex = suppliers.findIndex((supplier) => supplier[3] === supplierId)
@@ -116,13 +112,14 @@ export default function AddProduct() {
         const { data, error } = await uploadProductImage(
           productImage,
           auth.user.id,
-          `${crypto.randomUUID()}.${extensionByType[productImage.type]}`
+          `${crypto.randomUUID()}.webp`
         )
         if (error) {
           showToast(error.message || 'Impossible de téléverser la photo')
           return
         }
         image = data.path
+        uploadedImagePath = data.path
       }
 
       const { error, imageError } = await addProduct({
@@ -138,9 +135,19 @@ export default function AddProduct() {
         supplierIndex,
       })
       if (error) {
-        showToast(error.message || 'Impossible d’enregistrer le produit')
+        let message = error.message || 'Impossible d’enregistrer le produit'
+        if (uploadedImagePath) {
+          const { error: cleanupError } = await removeProductImage(uploadedImagePath)
+          if (cleanupError) {
+            message += ` La photo temporaire n’a pas pu être supprimée : ${cleanupError.message}`
+          } else {
+            uploadedImagePath = null
+          }
+        }
+        showToast(message)
         return
       }
+      uploadedImagePath = null
       showToast(
         imageError
           ? `Produit ajouté, mais la photo n’a pas pu être affichée : ${imageError.message}`
@@ -148,7 +155,14 @@ export default function AddProduct() {
       )
       navigate('products')
     } catch (error) {
-      showToast(error.message || 'Une erreur est survenue pendant l’enregistrement')
+      let message = error.message || 'Une erreur est survenue pendant l’enregistrement'
+      if (uploadedImagePath) {
+        const { error: cleanupError } = await removeProductImage(uploadedImagePath)
+        if (cleanupError) {
+          message += ` La photo temporaire n’a pas pu être supprimée : ${cleanupError.message}`
+        }
+      }
+      showToast(message)
     } finally {
       setSaving(false)
     }
@@ -203,17 +217,21 @@ export default function AddProduct() {
             Choisir une photo
             <input
               type="file"
-              accept="image/jpeg,image/png,image/webp,image/gif"
+              accept="image/jpeg,image/png,image/webp"
               onChange={(event) => setProductImage(event.target.files?.[0] || null)}
               style={{ display: 'none' }}
             />
           </label>
+          <p className="sub" style={{ marginTop: 8 }}>
+            La photo est redimensionnée et compressée en WebP avant son envoi.
+          </p>
         </div>
 
         <label className="fld">
           <span>Nom du produit</span>
           <input
             type="text"
+            maxLength={120}
             value={form.name}
             onChange={(e) => update('name', e.target.value)}
             placeholder="Ex: Riz parfumé 25 kg"
@@ -224,6 +242,7 @@ export default function AddProduct() {
           <span>Catégorie</span>
           <input
             type="text"
+            maxLength={80}
             list="categories"
             value={form.category}
             onChange={(e) => update('category', e.target.value)}
@@ -261,6 +280,7 @@ export default function AddProduct() {
           <span>Unité</span>
           <input
             type="text"
+            maxLength={32}
             value={form.unit}
             onChange={(e) => update('unit', e.target.value)}
             placeholder="Ex: sacs, bidons, cartons"
@@ -312,6 +332,7 @@ export default function AddProduct() {
               <span>Nom du fournisseur</span>
               <input
                 type="text"
+                maxLength={120}
                 value={newSupplier.name}
                 onChange={(e) =>
                   setNewSupplier((s) => ({ ...s, name: e.target.value }))
@@ -323,6 +344,7 @@ export default function AddProduct() {
               <span>Catégories</span>
               <input
                 type="text"
+                maxLength={255}
                 value={newSupplier.categories}
                 onChange={(e) =>
                   setNewSupplier((s) => ({ ...s, categories: e.target.value }))
