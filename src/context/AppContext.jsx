@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useCallback, useEffect } from 'react'
 import { useAuthContext } from './AuthContext'
+import { getRouteFromLocation, getRoutePath } from '../lib/routes'
 import { enqueueWrite, getQueuedWrites, getShopSnapshot, saveShopSnapshot, countQueuedWrites } from '../lib/offlineStore'
 import {
   createMovement as saveMovement,
@@ -55,7 +56,7 @@ function toMovementRow(movement, productRows) {
 
 export function AppProvider({ children }) {
   const auth = useAuthContext()
-  const [route, setRoute] = useState('login')
+  const [route, setRoute] = useState(getRouteFromLocation)
   const [products, setProducts] = useState([])
   const [suppliers, setSuppliers] = useState([])
   const [movements, setMovements] = useState([])
@@ -128,12 +129,16 @@ export function AppProvider({ children }) {
   }, [])
 
   const navigate = useCallback((r) => {
-    window.location.hash = `#/${r}`
+    window.history.pushState({}, '', getRoutePath(r))
+    setRoute(r)
   }, [])
 
   const syncRoute = useCallback(() => {
-    const h = window.location.hash.replace('#/', '') || 'login'
-    setRoute(h)
+    const nextRoute = getRouteFromLocation()
+    if (window.location.hash.startsWith('#/')) {
+      window.history.replaceState({}, '', getRoutePath(nextRoute))
+    }
+    setRoute(nextRoute)
   }, [])
 
   const refreshShopData = useCallback(async (userId) => {

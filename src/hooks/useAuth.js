@@ -81,7 +81,7 @@ export function useAuth() {
     const { data: listener } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         if (event === 'SIGNED_OUT' || !session) {
-          setState(initialState)
+          setState({ ...initialState, loading: false })
           return
         }
 
@@ -145,7 +145,7 @@ export function useAuth() {
       setState((s) => ({ ...s, loading: false, error }))
       return { error }
     }
-    setState(initialState)
+    setState({ ...initialState, loading: false })
     return { error }
   }, [])
 

@@ -1,6 +1,7 @@
 import { useApp } from '../context/AppContext'
 import { Icon } from './Icons'
 import LogoutButton from './LogoutButton'
+import { getRoutePath } from '../lib/routes'
 
 const ITEMS = [
   ['home', 'Accueil', 'home'],
@@ -15,7 +16,7 @@ const ITEMS = [
 ]
 
 export default function SideNav() {
-  const { route, products } = useApp()
+  const { route, products, navigate } = useApp()
   const alerts = products.filter((product) => product[3] === 0 || product[3] <= product[4]).length
 
   return (
@@ -33,11 +34,11 @@ export default function SideNav() {
         return (
           <a
             key={name}
-            href={`#/${name}`}
+            href={getRoutePath(name)}
             className={active ? 'on' : ''}
             onClick={(e) => {
               e.preventDefault()
-              window.location.hash = `#/${name}`
+              navigate(name)
             }}
           >
             <Icon name={icon} />

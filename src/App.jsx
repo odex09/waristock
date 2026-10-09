@@ -52,6 +52,7 @@ function AppContent() {
   const {
     route,
     syncRoute,
+    auth,
     toast,
     isOnline,
     pendingSyncCount,
@@ -59,13 +60,38 @@ function AppContent() {
   } = useApp()
 
   useEffect(() => {
-    const onHash = () => syncRoute()
-    window.addEventListener('hashchange', onHash)
+    const onPopState = () => syncRoute()
+    window.addEventListener('popstate', onPopState)
     syncRoute()
-    return () => window.removeEventListener('hashchange', onHash)
+    return () => window.removeEventListener('popstate', onPopState)
   }, [syncRoute])
 
-  const Page = PAGES[route] || Login
+  const hasPage = Object.prototype.hasOwnProperty.call(PAGES, route)
+
+  useEffect(() => {
+    if (auth.loading) return
+
+    const isPublicRoute = route === 'login' || route === 'register'
+    if (window.location.pathname === '/') {
+      window.history.replaceState({}, '', auth.user ? '/home' : '/login')
+      syncRoute()
+    } else if (!auth.user && !isPublicRoute) {
+      window.history.replaceState({}, '', '/login')
+      syncRoute()
+    } else if (auth.user && isPublicRoute) {
+      window.history.replaceState({}, '', '/home')
+      syncRoute()
+    } else if (!hasPage) {
+      window.history.replaceState({}, '', auth.user ? '/home' : '/login')
+      syncRoute()
+    }
+  }, [auth.loading, auth.user, hasPage, route, syncRoute])
+
+  const isPublicRoute = route === 'login' || route === 'register'
+  const isProtectedRoute = !isPublicRoute
+  const canRenderRoute = !auth.loading &&
+    (auth.user ? !isPublicRoute && hasPage : isPublicRoute)
+  const Page = hasPage ? PAGES[route] : Login
   const isAuthPage = route === 'login' || route === 'register'
 
   return (
@@ -87,19 +113,23 @@ function AppContent() {
           )}
         </div>
       )}
-      {!isAuthPage && <SideNav />}
+      {auth.user && !isAuthPage && <SideNav />}
       <main
         id="app"
         style={{
-          paddingBottom: isAuthPage ? 0 : '96px',
-          paddingLeft: isAuthPage ? 0 : undefined,
+          paddingBottom: isProtectedRoute && auth.user ? '96px' : 0,
+          paddingLeft: isProtectedRoute && auth.user ? undefined : 0,
         }}
       >
-        <Suspense fallback={<div className="page-loading" role="status">Chargement…</div>}>
-          <Page />
-        </Suspense>
+        {canRenderRoute ? (
+          <Suspense fallback={<div className="page-loading" role="status">Chargement…</div>}>
+            <Page />
+          </Suspense>
+        ) : (
+          <div className="page-loading" role="status">Vérification de la session…</div>
+        )}
       </main>
-      {!isAuthPage && <BottomNav />}
+      {auth.user && !isAuthPage && <BottomNav />}
       {toast && (
         <div className="toast" role="status" aria-live="polite">
           {toast}

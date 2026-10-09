@@ -1,3 +1,5 @@
+import { getRoutePath } from '../lib/routes'
+
 export default function ProductCard({
   product,
   onClick,
@@ -14,7 +16,7 @@ export default function ProductCard({
   return (
     <a
       className={`card pr ${product[3] === 0 ? 'al r' : product[3] <= product[4] ? 'al' : ''}`}
-      href="#/detail"
+      href={getRoutePath('detail')}
       onClick={(e) => {
         e.preventDefault()
         if (onClick) onClick()

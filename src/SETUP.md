@@ -11,6 +11,8 @@ VITE_SUPABASE_ANON_KEY=eyJxxxxx
 
 ### 2. Schéma SQL
 Applique le contenu de `supabase/waristockdb.sql` dans l'éditeur SQL de Supabase.
+Pour une base déjà installée, applique également les migrations présentes dans
+`supabase/migrations/` dans l'ordre chronologique.
 
 ### 3. Installation
 ```bash

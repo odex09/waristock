@@ -22,3 +22,10 @@ hors ligne. La création de produits et de fournisseurs, les téléversements de
 photos et les modifications du profil nécessitent encore une connexion.
 L’application utilise le stockage local du navigateur (IndexedDB) pour son
 cache et sa file de synchronisation.
+
+## URLs
+
+Les pages utilisent des chemins directs, par exemple `/login`, `/home`,
+`/products`, `/products/new` et `/reports`. En production, configurez
+l’hébergement pour renvoyer les chemins inconnus vers `index.html` afin que
+l’ouverture ou l’actualisation d’un lien profond charge l’application.

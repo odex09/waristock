@@ -236,7 +236,8 @@ create index idx_inventories_product_id on public.inventories(product_id);
 -- ============================================
 -- 7. VUE: Crédits clients actifs
 -- ============================================
-create or replace view public.credit_clients as
+create or replace view public.credit_clients
+with (security_invoker = true) as
 select
   m.id,
   m.shop_id,
@@ -255,12 +256,11 @@ from public.movements m
 join public.products p on p.id = m.product_id
 where m.payment_method = 'credit' and m.type = 'exit';
 
--- Note: la vue hérite des RLS des tables sous-jacentes
-
 -- ============================================
 -- 8. VUE: Alertes stock bas / rupture
 -- ============================================
-create or replace view public.stock_alerts as
+create or replace view public.stock_alerts
+with (security_invoker = true) as
 select
   id,
   shop_id,

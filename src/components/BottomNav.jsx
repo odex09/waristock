@@ -1,5 +1,6 @@
 import { useApp } from '../context/AppContext'
 import { Icon } from './Icons'
+import { getRoutePath } from '../lib/routes'
 
 const NAV = [
   ['home', 'Accueil', 'home'],
@@ -31,7 +32,7 @@ export default function BottomNav() {
             <a
               key={name}
               className="fab"
-              href="#/move"
+              href={getRoutePath('move')}
               onClick={(e) => {
                 e.preventDefault()
                 navigate('move')
@@ -46,7 +47,7 @@ export default function BottomNav() {
         return (
           <a
             key={name}
-            href={`#/${name}`}
+            href={getRoutePath(name)}
             className={active ? 'on' : ''}
             aria-current={active ? 'page' : undefined}
             onClick={(e) => {

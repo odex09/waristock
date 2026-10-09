@@ -1,6 +1,7 @@
 import { useApp } from '../context/AppContext'
 import { Icon } from '../components/Icons'
 import LogoutButton from '../components/LogoutButton'
+import { getRoutePath } from '../lib/routes'
 
 const ITEMS = [
   ['suppliers', 'users', 'Fournisseurs'],
@@ -61,7 +62,7 @@ export default function More() {
         {ITEMS.map(([name, icon, label]) => (
           <a
             key={name}
-            href={`#/${name}`}
+            href={getRoutePath(name)}
             onClick={(e) => {
               e.preventDefault()
               navigate(name)
