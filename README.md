@@ -35,6 +35,7 @@ avant de couper le réseau.
 ## URLs
 
 Les pages utilisent des chemins directs, par exemple `/login`, `/home`,
-`/products`, `/products/new` et `/reports`. En production, configurez
-l’hébergement pour renvoyer les chemins inconnus vers `index.html` afin que
-l’ouverture ou l’actualisation d’un lien profond charge l’application.
+`/products`, `/products/new` et `/reports`. La configuration Vercel dans
+`vercel.json` renvoie les chemins de navigation vers l’application afin que
+l’ouverture ou l’actualisation d’un lien profond fonctionne. Sur un autre
+hébergeur, configurez le même fallback vers `index.html`.

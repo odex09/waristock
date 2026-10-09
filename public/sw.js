@@ -59,7 +59,13 @@ self.addEventListener('fetch', (event) => {
           if (response.ok) {
             const copy = response.clone()
             await caches.open(CACHE_NAME).then((cache) => cache.put('/index.html', copy))
+            return response
           }
+
+          if (response.status === 404) {
+            return await caches.match('/index.html') || response
+          }
+
           return response
         })
         .catch(async () => (
