@@ -1,6 +1,12 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../lib/supabaseClient'
-import { getCachedProfile, saveCachedProfile } from '../lib/offlineStore'
+import {
+  clearOfflineUserId,
+  getCachedProfile,
+  getOfflineUserId,
+  saveCachedProfile,
+  saveOfflineUserId,
+} from '../lib/offlineStore'
 import {
   getSession,
   signInWithPhone,
@@ -28,6 +34,13 @@ export function useAuth() {
           cachedProfile = await getCachedProfile(session.user.id)
         } catch (error) {
           console.warn('Impossible de lire le profil hors ligne :', error)
+        }
+        if (!navigator.onLine && cachedProfile) {
+          try {
+            await saveOfflineUserId(session.user.id)
+          } catch (error) {
+            console.warn('Impossible de mémoriser le compte hors ligne :', error)
+          }
         }
         if (cachedProfile) {
           setState({
@@ -63,12 +76,39 @@ export function useAuth() {
         if (data) {
           try {
             await saveCachedProfile(session.user.id, data)
+            await saveOfflineUserId(session.user.id)
           } catch (cacheError) {
             console.warn('Impossible de mettre le profil en cache hors ligne :', cacheError)
           }
+        } else if (cachedProfile) {
+          try {
+            await saveOfflineUserId(session.user.id)
+          } catch (cacheError) {
+            console.warn('Impossible de mémoriser le compte hors ligne :', cacheError)
+          }
         }
       } else {
-        setState((s) => ({ ...s, loading: false }))
+        if (!navigator.onLine) {
+          const offlineUserId = await getOfflineUserId()
+          if (offlineUserId) {
+            const cachedProfile = await getCachedProfile(offlineUserId)
+            if (cachedProfile) {
+              setState({
+                user: { id: offlineUserId },
+                profile: cachedProfile,
+                loading: false,
+                error: null,
+              })
+              return
+            }
+          }
+        }
+        try {
+          await clearOfflineUserId()
+        } catch (error) {
+          console.warn('Impossible d’effacer le compte hors ligne :', error)
+        }
+        setState({ ...initialState, loading: false })
       }
     } catch (error) {
       setState((s) => ({ ...s, loading: false, error }))
@@ -80,18 +120,28 @@ export function useAuth() {
 
     const { data: listener } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        if (event === 'SIGNED_OUT' || !session) {
+        if (event === 'SIGNED_OUT') {
+          try {
+            await clearOfflineUserId()
+          } catch (error) {
+            console.warn('Impossible d’effacer le compte hors ligne :', error)
+          }
           setState({ ...initialState, loading: false })
           return
         }
 
-        if (session?.user) {
+        if (session?.user && event !== 'INITIAL_SESSION') {
           loadSession()
         }
       }
     )
 
     return () => listener.subscription.unsubscribe()
+  }, [loadSession])
+
+  useEffect(() => {
+    window.addEventListener('online', loadSession)
+    return () => window.removeEventListener('online', loadSession)
   }, [loadSession])
 
   const login = useCallback(async (countryCode, phone, password) => {

@@ -22,6 +22,11 @@ hors ligne. La création de produits et de fournisseurs, les téléversements de
 photos et les modifications du profil nécessitent encore une connexion.
 L’application utilise le stockage local du navigateur (IndexedDB) pour son
 cache et sa file de synchronisation.
+La session Supabase est conservée sur l’appareil : une réouverture de la PWA
+ne demande pas une nouvelle connexion tant que la session reste valide. Si la
+session expire hors ligne, l’accès hors ligne peut être restauré uniquement
+pour un compte déjà connecté sur cet appareil et disposant d’un profil en cache.
+À la reconnexion, la session est vérifiée à nouveau auprès de Supabase.
 
 ## URLs
 

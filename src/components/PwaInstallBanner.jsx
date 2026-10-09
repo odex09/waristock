@@ -124,7 +124,7 @@ export default function PwaInstallBanner() {
         </p>
       )}
       {!canInstall && !showHelp && (
-        <span className="pwa-banner-hint">Application mobile</span>
+        <span className="pwa-banner-hint">Application mobile/desktop</span>
       )}
       {installError && (
         <p className="pwa-banner-help" role="alert">

@@ -1,8 +1,10 @@
 const DATABASE_NAME = 'waristock-offline'
-const DATABASE_VERSION = 2
+const DATABASE_VERSION = 3
 const SNAPSHOTS_STORE = 'shop-snapshots'
 const QUEUE_STORE = 'write-queue'
 const PROFILES_STORE = 'profiles'
+const OFFLINE_IDENTITY_STORE = 'offline-identity'
+const OFFLINE_IDENTITY_KEY = 'last-authenticated-user'
 
 function openDatabase() {
   return new Promise((resolve, reject) => {
@@ -22,6 +24,9 @@ function openDatabase() {
       }
       if (!database.objectStoreNames.contains(PROFILES_STORE)) {
         database.createObjectStore(PROFILES_STORE, { keyPath: 'userId' })
+      }
+      if (!database.objectStoreNames.contains(OFFLINE_IDENTITY_STORE)) {
+        database.createObjectStore(OFFLINE_IDENTITY_STORE, { keyPath: 'key' })
       }
     }
     request.onsuccess = () => resolve(request.result)
@@ -77,6 +82,24 @@ export function getCachedProfile(userId) {
 export function saveCachedProfile(userId, profile) {
   return transact(PROFILES_STORE, 'readwrite', (store) =>
     store.put({ userId, profile })
+  )
+}
+
+export function getOfflineUserId() {
+  return transact(OFFLINE_IDENTITY_STORE, 'readonly', (store) =>
+    store.get(OFFLINE_IDENTITY_KEY)
+  ).then((record) => record?.userId || null)
+}
+
+export function saveOfflineUserId(userId) {
+  return transact(OFFLINE_IDENTITY_STORE, 'readwrite', (store) =>
+    store.put({ key: OFFLINE_IDENTITY_KEY, userId })
+  )
+}
+
+export function clearOfflineUserId() {
+  return transact(OFFLINE_IDENTITY_STORE, 'readwrite', (store) =>
+    store.delete(OFFLINE_IDENTITY_KEY)
   )
 }
 
